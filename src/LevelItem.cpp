@@ -1,4 +1,3 @@
-
 #include "Chat.h"
 #include "Configuration/Config.h"
 #include "Player.h"
@@ -20,11 +19,11 @@ public:
     mod_levelitem_Conf() : WorldScript("mod_levelitem_Conf") { }
 
     // Load Configuration Settings
-    void SetInitialWorldSettings()
+    void OnBeforeConfigLoad(bool /*reload*/) override
     {
-        LevelItemEnable = sConfigMgr->GetBoolDefault("LevelItem.Enable", true);
-        LevelItemAnnounce = sConfigMgr->GetBoolDefault("LevelItem.Announce", true);
-        MaxItemLevel = sConfigMgr->GetIntDefault("LevelItem.MaxItemLevel", 80);
+        LevelItemEnable = sConfigMgr->GetOption<bool>("LevelItem.Enable", true);
+        LevelItemAnnounce = sConfigMgr->GetOption<bool>("LevelItem.Announce", true);
+        MaxItemLevel = sConfigMgr->GetOption<int>("LevelItem.MaxItemLevel", 80);
     }
 };
 
@@ -37,7 +36,7 @@ public:
 
     void OnLogin(Player* player) override
     {
-        if (sConfigMgr->GetBoolDefault("Arena1v1Announcer.Enable", true))
+        if (LevelItemAnnounce)
         {
             ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00Level Item |rmodule.");
         }
@@ -70,17 +69,86 @@ public:
         p->GiveLevel(newLevel);
         p->SetUInt32Value(PLAYER_XP, 0);
         p->DestroyItemCount(i->GetEntry(), 1, true);
-        ChatHandler(p->GetSession()).PSendSysMessage("You have used one Level-Up Token!");
+        ChatHandler(p->GetSession()).PSendSysMessage("You have used a Level-Up Token!");
 
         return true;
     }
 };
 
+class Level70Item : public ItemScript
+{
+public:
+    Level70Item() : ItemScript("Level70Item") { }
 
+    bool OnUse(Player* p, Item* i, const SpellCastTargets &) override
+    {
+        if (!LevelItemEnable)
+            return false;
+
+        if (p->IsInCombat() || p->IsInFlight() || p->GetMap()->IsBattlegroundOrArena())
+        {
+            ChatHandler(p->GetSession()).PSendSysMessage("You can't use that right now!");
+            return false;
+        }
+
+        if (p->getLevel() > 70)
+        {
+            ChatHandler(p->GetSession()).PSendSysMessage("You're already above level %u!", 70);
+            return false;
+        }
+        if (p->getLevel() == 70)
+        {
+            ChatHandler(p->GetSession()).PSendSysMessage("You're already at level %u!", 70);
+            return false;
+        }
+
+        uint8 newLevel = 70;
+        p->GiveLevel(newLevel);
+        p->SetUInt32Value(PLAYER_XP, 0);
+        p->DestroyItemCount(i->GetEntry(), 1, true);
+        ChatHandler(p->GetSession()).PSendSysMessage("You have used a Level 70 Token!");
+
+        return true;
+    }
+};
+
+class Level80Item : public ItemScript
+{
+public:
+    Level80Item() : ItemScript("Level80Item") { }
+
+    bool OnUse(Player* p, Item* i, const SpellCastTargets &) override
+    {
+        if (!LevelItemEnable)
+            return false;
+
+        if (p->IsInCombat() || p->IsInFlight() || p->GetMap()->IsBattlegroundOrArena())
+        {
+            ChatHandler(p->GetSession()).PSendSysMessage("You can't use that right now!");
+            return false;
+        }
+
+        if (p->getLevel() >= 80)
+        {
+            ChatHandler(p->GetSession()).PSendSysMessage("You're already at level %u!", 80);
+            return false;
+        }
+
+        uint8 newLevel = 80;
+        p->GiveLevel(newLevel);
+        p->SetUInt32Value(PLAYER_XP, 0);
+        p->DestroyItemCount(i->GetEntry(), 1, true);
+        ChatHandler(p->GetSession()).PSendSysMessage("You have used a Level 80 Token!");
+
+        return true;
+    }
+};
 
 void AddLevelItemScripts()
 {
     new mod_levelitem_Conf();
     new mod_levelitem_Announce();
     new LevelItem();
+    new Level70Item();
+    new Level80Item();
 }
